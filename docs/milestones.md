@@ -3,11 +3,11 @@
 Milestones are awarded to the player when they meet a certain goal, and give some benefit. Milestones should be formatted like this:
 
 ```js
-    milestones: {
-        0: {
-            requirementDesc: "123 waffles",
-        }
-        etc
+milestones: {
+    0: {
+        requirementDescription: "123 waffles",
+        effectDescription: "blah",
+        done() { return player.w.points.gte(123) }
     }
 ```
 
@@ -39,5 +39,6 @@ Milestone features:
 
 - layer: **Assigned automagically**. It's the same value as the name of this layer, so you can do player[this.layer].points or similar
 
-- id: **Assigned automagically**. It's the "key" which the milestone was stored under, for convenient access.
-      The milestone in the example's id is 0.
+- id: **assigned automagically**. It's the "key" which the milestone was stored under, for convenient access. The milestone in the example's id is 0.
+
+Disaable milestone popups by adding `milestonePopups: false` to the layer.

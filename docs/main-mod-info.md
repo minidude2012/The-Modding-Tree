@@ -12,9 +12,9 @@ Here's a breakdown of what's in it:
     - author: The name of the author, displayed in the info tab.
     - pointsName: This changes what is displayed instead of "points" for the main currency. (It does not affect it in the code.)
     - discordName, discordLink: If you have a Discord server or other discussion place, you can add a link to it.
-                "discordName" is the text on the link, and "discordLink" is the url of an invite.
-                If you're using a Discord invite, please make sure it's set to never expire.
-    - changelogLink: You can use this to set a link to a page where your changelog for the game is displayed.
+
+        "discordName" is the text on the link, and "discordLink" is the url of an invite. If you're using a Discord invite, please make sure it's set to never expire.
+
     - offlineLimit: The maximum amount of offline time that the player can accumulate, in hours. Any extra time is lost. (a number)
                     This is useful because most of these mods are fast-paced enough that too much offline time ruins the balance,
                     such as the time in between updates.
@@ -25,9 +25,9 @@ Here's a breakdown of what's in it:
     num: The mod's version number, displayed at the top right of the tree tab.
     name: The version's name, displayed alongside the number in the info tab.
 
-- doNotCallTheseFunctionsEveryTick is very important. TMT calls every function anywhere in "layers" every tick to store the result,
-        unless specifically told not to. Functions that have are used to do an action need to be identified. "Official" functions
-        (those in the documentation) are all fine, but if you make any new ones, add their names to this array.
+- changelog is the HTML displayed in the changelog tab.
+
+- doNotCallTheseFunctionsEveryTick is very important. TMT calls every function anywhere in "layers" every tick to store the result, unless specifically told not to. Functions that have are used to do an action need to be identified. "Official" functions (those in the documentation) are all fine, but if you make any new ones, add their names to this array.
 
 ```js
 // (The ones here are examples, all official functions are already taken care of)

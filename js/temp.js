@@ -1,4 +1,6 @@
 var tmp = {}
+var temp = tmp // Proxy for tmp
+var NaNalert = false;
 
 // Tmp will not call these
 var activeFunctions = [
@@ -28,8 +30,10 @@ function setupTemp() {
 		tmp[layer].notify = {}
 		tmp[layer].canReset = {}
 		tmp[layer].prestigeButtonText = {}
+		tmp[layer].computedNodeStyle = []
 		setupBarStyles(layer)
 	}
+	temp = tmp
 }
 
 function setupTempData(layerData, tmpData) {
@@ -73,6 +77,10 @@ function updateTemp() {
 		tmp[layer].canReset = canReset(layer)
 		tmp[layer].prestigeButtonText = prestigeButtonText(layer)
 		constructBarStyles(layer)
+		constructAchievementStyles(layer)
+		constructNodeStyle(layer)
+		updateChallengeDisplay(layer)
+
 	}
 
 	tmp.pointGen = getPointGen()
@@ -106,6 +114,19 @@ function updateTempData(layerData, tmpData) {
 
 function updateChallengeTemp(layer){
 	updateTempData(layers[layer].challenges, tmp[layer].challenges)
+	updateChallengeDisplay(layer)
+}
+
+function updateChallengeDisplay(layer) {
+	for (id in player[layer].challenges) {
+		let style = "locked"
+		if (player[layer].activeChallenge == id && canCompleteChallenge(layer, id)) style = "canComplete"
+		else if (hasChallenge(layer, id)) style = "done"
+		tmp[layer].challenges[id].defaultStyle = style
+
+		tmp[layer].challenges[id].buttonText = (player[layer].activeChallenge==(id)?(canCompleteChallenge(layer, id)?"Finish":"Exit Early"):(hasChallenge(layer, id)?"Completed":"Start"))
+	}
+
 }
 
 function updateBuyableTemp(layer){
@@ -116,8 +137,33 @@ function updateClickableTemp(layer){
 	updateTempData(layers[layer].clickables, tmp[layer].clickables)
 }
 
+function constructNodeStyle(layer){
+	let style = []
+	if ((tmp[layer].isLayer && layerunlocked(layer)) || (!tmp[layer].isLayer && tmp[layer].canClick))
+		style.push({'background-color': tmp[layer].color})
+	if (tmp[layer].image !== undefined)
+		style.push({'background-image': 'url("' + tmp[layer].image + '")'})
+	style.push(tmp[layer].nodeStyle)
+	Vue.set(tmp[layer], 'computedNodeStyle', style)
+}
 
-var DIR_MARGINS = ["margin-bottom", "margin-top", "margin-right", "margin-left"]
+
+
+
+function constructAchievementStyles(layer){
+	for (id in tmp[layer].achievements) {
+		ach = tmp[layer].achievements[id]
+		if (isPlainObject(ach)) {
+			let style = []
+			if (ach.image){ 
+				style.push({'background-image': 'url("' + ach.image + '")'})
+			} 
+			if (!ach.unlocked) style.push({'visibility': 'hidden'})
+			style.push(ach.style)
+			Vue.set(ach, 'computedStyle', style)
+		}
+	}
+}
 
 function constructBarStyles(layer){
 	if (layers[layer].bars === undefined)
@@ -160,7 +206,6 @@ function setupBarStyles(layer){
 	for (id in layers[layer].bars){
 		let bar = tmp[layer].bars[id]
 		bar.dims = {}
-		let dir = bar.direction
 		bar.fillDims = {}
 	}
 }

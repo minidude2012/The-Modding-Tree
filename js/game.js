@@ -5,8 +5,8 @@ var gameEnded = false;
 
 // Don't change this
 const TMT_VERSION = {
-	tmtNum: "2.2.7.1",
-	tmtName: "Uprooted"
+	tmtNum: "2.3.4",
+	tmtName: "Cooler and Newer Edition"
 }
 
 function finishedChallenges(layer, data){
@@ -15,7 +15,11 @@ function finishedChallenges(layer, data){
 
 function getResetGain(layer, useType = null) {
 	let type = useType
-	if (!useType) type = tmp[layer].type
+	if (!useType){ 
+		type = tmp[layer].type
+		if (layers[layer].getResetGain !== undefined)
+			return layers[layer].getResetGain()
+	} 
 	if(tmp[layer].type == "none")
 		return new Decimal (0)
 	if (tmp[layer].gainExp.eq(0)) return new Decimal(0)
@@ -37,7 +41,12 @@ function getResetGain(layer, useType = null) {
 
 function getNextAt(layer, canMax=false, useType = null) {
 	let type = useType
-	if (!useType) type = tmp[layer].type
+	if (!useType) {
+		type = tmp[layer].type
+		if (layers[layer].getNextAt !== undefined)
+			return layers[layer].getNextAt(canMax)
+
+		}
 	if(tmp[layer].type == "none")
 		return new Decimal (Infinity)
 
@@ -63,6 +72,12 @@ function getNextAt(layer, canMax=false, useType = null) {
 		return new Decimal(0)
 	}}
 
+function softcap(value, cap, power = 0.5) {
+	if (value.lte(cap)) return value
+	else
+		return value.pow(power).times(cap.pow(decimalOne.sub(power)))
+}
+
 // Return true if the layer should be highlighted. By default checks for upgrades only.
 function shouldNotify(layer){
 	for (id in tmp[layer].upgrades){
@@ -79,17 +94,16 @@ function shouldNotify(layer){
 	return false
 }
 
-function canReset(layer){
-	if (tmp[layer].type == "normal") {
+function canReset(layer)
+{	
+	if (layers[layer].canReset!== undefined)
+		return run(layers[layer].canReset, layers[layer])
+	else if(tmp[layer].type == "normal")
 		return tmp[layer].baseAmount.gte(tmp[layer].requires)
-	} else if (tmp[layer].type== "static") {
+	else if(tmp[layer].type== "static")
 		return tmp[layer].baseAmount.gte(tmp[layer].nextAt) 
-	} if (tmp[layer].type == "none") {
+	else 
 		return false
-	} else if (layers[layer].canReset != undefined) {
-		return layers[layer].canReset()
-	}
-	return tmp[layer].baseAmount.gte(tmp[layer].requires)
 }
 
 function rowReset(row, layer) {
@@ -107,7 +121,7 @@ function rowReset(row, layer) {
 		lr = order[i]
 		if (layers[lr].doReset) {
 			player[lr].activeChallenge = null // Exit challenges on any row reset on an equal or higher row
-			layers[lr].doReset(layer)
+			run(layers[lr].doReset, layers[lr], layer)
 		}
 		else if (tmp[layer].row > tmp[lr].row) layerDataReset(lr)
 	}
@@ -186,7 +200,7 @@ function doReset(layer, force=false) {
 		if (player[layer].times != undefined) player[layer].times += timesMult
 
 		if (layers[layer].onPrestige)
-			layers[layer].onPrestige(gain)
+			run(layers[layer].onPrestige, layers[layer], gain)
 		
 		addPoints(layer, gain)
 		updateMilestones(layer)
@@ -304,7 +318,7 @@ function hasGoalForChallenge(layer, x){
 		}
 		else if (challenge.currencyLayer){
 			let lr = challenge.currencyLayer
-			return player[lr][name].gte(readData(challenge.goal))
+			return !(player[lr][name].lt(challenge.goal)) 
 		}
 		else {
 			return player[name].gte(challenge.goal)
@@ -344,7 +358,7 @@ function completeChallenge(layer, x) {
 	if (player[layer].challenges[x] < tmp[layer].challenges[x].completionLimit || player[layer].challenges[x] == undefined) {
 		needCanvasUpdate = true
 		player[layer].challenges[x] += 1
-		if (layers[layer].challenges[x].onComplete) layers[layer].challenges[x].onComplete()
+		if (layers[layer].challenges[x].onComplete) run(layers[layer].challenges[x].onComplete, layers[layer].challenges[x])
 	}
 	let b = 0
 	while (player[layer].challenges[x] < tmp[layer].challenges[x].completionLimit && b < 100) {
@@ -368,7 +382,7 @@ VERSION.withName = VERSION.withoutName + (VERSION.name ? ": " + VERSION.name : "
 function autobuyUpgrades(layer){
 	if (!tmp[layer].upgrades) return
 	for (id in tmp[layer].upgrades)
-		if (isPlainObject(tmp[layers].upgrades[id]) && (layers[layer].upgrades[id].canAfford === undefined || layers[layer].upgrades[id].canAfford() === true))
+		if (isPlainObject(tmp[layer].upgrades[id]) && (layers[layer].upgrades[id].canAfford === undefined || layers[layer].upgrades[id].canAfford() === true))
 			buyUpg(layer, id) 
 }
 
@@ -488,5 +502,7 @@ var interval = setInterval(function() {
 	doPreTickStuff()
 	updateTemp();
 	gameLoop(diff)
+	fixNaNs()
+	adjustPopupTime(diff) 
 	ticking = false
 }, 50)

@@ -36,6 +36,8 @@ Key:
        and statistics). Side layers are not affected by resets unless you add a doReset to them.
        
 
+- displayRow: **OVERRIDE** Changes where the layer node appears without changing where it is in the reset order.
+
 - resource: Name of the main currency you gain by resetting on this layer.
 
 - effect(): **optional**, A function that calculates and returns the current values of any bonuses
@@ -43,8 +45,8 @@ Key:
     Can return a value or an object containing multiple values.
     *You will also have to implement the effect where it is applied.*
 
-- effectDescription: **optional**, A function that returns a description of this effect.
-                     If the text stays constant, it can just be a string.
+- layerShown(): **optional**, A function returning a bool which determines if this layer's node should be visible on the tree. It can also return "ghost", which will hide the layer, but its node will still take up space in the tree.
+    Defaults to true.
 
 - layerShown(): A function returning a bool which determines if this layer's node should be visible on the tree.
                 It can also return "ghost", which will hide the layer, but its node will still take up space in the tree.
@@ -97,6 +99,9 @@ Key:
 - infoboxes: Displays some text in a box that can be shown or hidden.
     [Explanations are in a separate file.](infoboxes.md)
 
+- achievementPopups, milestonePopups: **optional**, If false, disables popup message when you get the achievement/milestone. True by default.
+
+## Prestige formula features
 
 ## Prestige formula features
 
@@ -146,9 +151,9 @@ Key:
 - position: **optional**, Determines the horizontal position of the layer in its row. By default, it uses the layer id,
             and layers are sorted in alphabetical order.
 
-- branches: **optional**, an array of layer ids. On a tree, a line will appear from this layer to all of the layers
-            in the list. Alternatively, an entry in the array can be a 2-element array consisting of the layer id and a color
-            value. The color value can either be a string with a hex color code, or a number from 1-3 (theme-affected colors)
+- image: **override**. The url (local or global) of an image that goes on the node. (Overrides symbol)
+
+- position: **optional**. Determines the horizontal position of the layer in its row in a standard tree. By default, it uses the layer id, and layers are sorted in alphabetical order.
 
 - nodeStyle: **optional**,  a CSS object, where the keys are CSS attributes, which styles this layer's node on the tree
 
@@ -196,18 +201,13 @@ Key:
         },
 ```
 
-
 ## Custom Prestige type  
+(All of these can also be used by other prestige types)
 
-- getResetGain(): **For custom prestige type**, Returns how many points you should get if you reset now. You can call
-            getResetGain(this.layer, useType = "static") or similar to calculate what your gain would be under another
-            prestige type (provided you have all of the required features in the layer.)
+- getResetGain(): **mostly for custom prestige type**. Returns how many points you should get if you reset now. You can call `getResetGain(this.layer, useType = "static")` or similar to calculate what your gain would be under another prestige type (provided you have all of the required features in the layer).
 
-- getNextAt(canMax=false): **For custom prestige type**, Returns how many of the base currency you need to get to
-                the next point. canMax is an optional variable used with Static-ish layers to differentiate between if 
-                it's looking for the first point you can reset at, or the requirement for any gain at all.
-                (Supporting both is good). You can also call getNextAt(this.layer, canMax=false, useType = "static")
-                or similar to calculate what your next at would be under another prestige type (provided you have
-                all of the required features in the layer.)
+- getNextAt(canMax=false): **mostly for custom prestige type**. Returns how many of the base currency you need to get to the next point. `canMax` is an optional variable used with Static-ish layers to differentiate between if it's looking for the first point you can reset at, or the requirement for any gain at all (Supporting both is good). You can also call `getNextAt(this.layer, canMax=false, useType = "static")` or similar to calculate what your next at would be under another prestige type (provided you have all of the required features in the layer).
+
+- canReset(): **mostly for custom prestige type**. Return true only if you have the resources required to do a prestige here.
 
 - canReset(): **For custom prestige type**, return true only if you have the resources required to do a prestige here.

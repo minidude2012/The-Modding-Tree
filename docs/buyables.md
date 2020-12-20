@@ -3,9 +3,13 @@
 Buyables are usually things that can be bought multiple times with scaling costs. If you set a respec function,
 the player can reset the purchases to get their currency back.
 
-The amount of a buyable owned is a Decimal.
-You can get or set the amount of a buyable with getBuyableAmt(layer, id) and setBuyableAmt(layer, id, amt).
-You can use buyableEffect(layer, id) to get the current effects of a buyable.
+The amount of a buyable owned is a `Decimal`. 
+
+Useful functions for dealing with buyables and implementing their effects:
+
+- getBuyableAmount(layer, id): get the amount of the buyable the player has
+- setBuyableAmount(layer, id, amount): set the amount of the buyable the player has
+- buyableEffect(layer, id): Returns the current effects of the buyable, if any.
 
 Buyables should be formatted like this:
 

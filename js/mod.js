@@ -5,10 +5,9 @@ let modInfo = {
 	pointsName: "points",
 	discordName: "pg132#7975",
 	discordLink: "",
-	changelogLink: "https://github.com/Acamaeda/The-Modding-Tree/blob/master/changelog.md",
-    	offlineLimit: 0,   
-	// In seconds, so the current 0 is 0 seconds
-    	initialStartPoints: new Decimal (0) // Used for hard resets and new players
+	initialStartPoints: new Decimal (10), // Used for hard resets and new players
+	
+	offlineLimit: 1,  // In hours
 }
 
 // Set your version in num and name
@@ -16,6 +15,13 @@ let VERSION = {
 	num: ".4.11 Blackjack",
 	name: "",
 }
+
+let changelog = `<h1>Changelog:</h1><br>
+	<h3>v0.0</h3><br>
+		- Added things.<br>
+		- Added stuff.`
+
+let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
 
 // If you add new functions anywhere inside of a layer, and those functions have an effect when called, add them here.
 // (The ones here are examples, all official functions are already taken care of)

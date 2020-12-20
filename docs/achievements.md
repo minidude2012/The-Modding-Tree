@@ -47,15 +47,18 @@ Individual achievement can have these features:
 - style: **Optional**, Applies CSS to this achievement, in the form of an object where the keys are CSS attributes,
          and the values are the values for those attributes (both as strings)
 
-- layer: **Assigned automagically**. It's the same value as the name of this layer, so you can do player[this.layer].points or similar
+- image: **optional**, puts the image from the given URL (relative or absolute) in the achievement
 
-- id: **Assigned automagically**. It's the "key" which the achievement was stored under, for convenient access.
-      The achievement in the example's id is 11.
+- style: **optional**. Applies CSS to this achievement, in the form of an object where the keys are CSS attributes, and the values are the values for those attributes (both as strings).
+
+- textStyle: **optional**. Applies CSS to the text, in the form of an object where the keys are CSS attributes, and the values are the values for those attributes (both as strings).
+
+- layer: **assigned automagically**. It's the same value as the name of this layer, so you can do `player[this.layer].points` or similar.
 
 
 - goalTooltip: **optional, depracated** Appears when the achievement is hovered over and locked, overrides the basic tooltip.
         This is to display the goal (or a hint). It can also be a function that returns updating text. Can use basic HTML.
 
-- doneTooltip: **optional, depracated** Appears when the achievement is hovered over and completed, overrides the basic tooltip.
-        This can display what the player achieved (the goal), and the rewards, if any.
-        It can also be a function that returns updating text. Can use basic HTML.
+- doneTooltip: **optional, deprecated**. Appears when the achievement is hovered over and completed, overrides the basic tooltip. This can display what the player achieved (the goal), and the rewards, if any. It can also be a function that returns updating text. Can use basic HTML.
+
+Disable achievement popups by adding `achievementsPopups: false` to the layer.

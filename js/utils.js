@@ -71,57 +71,8 @@ function format(decimal, precision=2,) {
 function formatWhole(decimal) {
 	decimal = new Decimal(decimal)
 	if (decimal.gte(1e9)) return format(decimal, 2)
-	if (decimal.lt(10) && decimal.neq(decimal.floor())) return format(decimal, 2)
-	return addCommas(decimal.floor().mag.toString())
-}
-
-function upperCase(s){
-	l = s.split(" ")
-	s2 = ""
-	for (j in l){
-		i = l[j]
-		if (i.length == 0) continue
-		s2 += i.slice(0, 1).toUpperCase()
-		s2 += i.slice(1, i.length)
-		s2 += " "
-	}
-	return s2
-}
-
-function getName(v){
-	if (typeof v == "object") v = v.toNumber()
-	return upperCase(getNumberName(v))
-}
-
-function getNumberName(v){
-	if (v == 0) return "zero"
-	let lookup = {
-		1: "one",
-		2: "two",
-		3: "three",
-		4: "four",
-		5: "five",
-		6: "six",
-		7: "seven",
-		8: "eight",
-		9: "nine",
-		10: "ten",
-		11: "eleven",
-		12: "twelve",
-		13: "thirteen",
-		14: "fourteen",
-		15: "fifteen",
-		16: "sixteen"
-	}
-	//this is WIP
-}
-
-function formatChances(v) {
-	v = new Decimal(v)
-	if (v.gte(.1)) return format(v)
-	if (v.eq(0)) return "0.00"
-	let b = v.log10().times(-1).floor().plus(1).toNumber()
-	return format(v.times(Decimal.pow(10, b))) + "/10^" + formatWhole(b)
+	if (decimal.lte(0.98) && !decimal.eq(0)) return format(decimal, 2)
+	return format(decimal, 0)
 }
 
 function formatTime(s) {
@@ -298,6 +249,7 @@ function load() {
 	changeTheme();
 	changeTreeQuality();
 	updateLayers()
+	setupModInfo()
 
 	setupTemp();
 	updateCurrentDepthValues()
@@ -306,6 +258,43 @@ function load() {
 	updateTemp();
 	loadVue();
 }
+
+function setupModInfo() {
+	modInfo.changelog = changelog
+	modInfo.winText = winText ? winText : `Congratulations! You have reached the end and beaten this game, but for now...`
+
+}
+
+function fixNaNs() {
+	NaNcheck(player)
+}
+
+function NaNcheck(data) {
+	for (item in data){
+		if (data[item] == null) {
+		}
+		else if (Array.isArray(data[item])) {
+			NaNcheck(data[item])
+		}
+		else if (data[item] !== data[item] || data[item] === decimalNaN){
+			if (NaNalert === true || confirm ("Invalid value found in player, named '" + item + "'. Please let the creator of this mod know! Would you like to try to auto-fix the save and keep going?")){
+				NaNalert = true
+				data[item] = (data[item] !== data[item] ? 0 : decimalZero)
+			}
+			else {
+				clearInterval(interval);
+				player.autosave = false;
+				NaNalert = true;
+			}
+		}
+		else if (data[item] instanceof Decimal) { // Convert to Decimal
+		}
+		else if ((!!data[item]) && (data[item].constructor === Object)) {
+			NaNcheck(data[item])
+		}
+	}	
+}
+
 
 function exportSave() {
 	let str = btoa(JSON.stringify(player))
@@ -456,8 +445,9 @@ function respecBuyables(layer) {
 	if (!layers[layer].buyables) return
 	if (!layers[layer].buyables.respec) return
 	if (!confirm("Are you sure you want to respec? This will force you to do a \"" + (tmp[layer].name ? tmp[layer].name : layer) + "\" reset as well!")) return
-	layers[layer].buyables.respec()
+	run(layers[layer].buyables.respec, layers[layer].buyables)
 	updateBuyableTemp(layer)
+	document.activeElement.blur()
 }
 
 function canAffordUpgrade(layer, id) {
@@ -548,27 +538,38 @@ function buyUpg(layer, id) {
 	if (!player[layer].unlocked) return
 	if (!tmp[layer].upgrades[id].unlocked) return
 	if (player[layer].upgrades.includes(id)) return
-	let cost = tmp[layer].upgrades[id].cost
+	if (upg.canAfford === false) return
+	let pay = layers[layer].upgrades[id].pay
+	if (pay !== undefined)
+		run(pay, layers[layer].upgrades[id])
+	else 
+		{
+		let cost = tmp[layer].upgrades[id].cost
 
-	if (upg.currencyInternalName != undefined){
-		let name = upg.currencyInternalName
-		if (upg.currencyLocation != undefined){
-			if (upg.currencyLocation[name].lt(cost)) return
-			upg.currencyLocation[name] = upg.currencyLocation[name].sub(cost)
-		} else if (upg.currencyLayer != undefined){
-			let lr = upg.currencyLayer
-			if (player[lr][name].lt(cost)) return
-			player[lr][name] = player[lr][name].sub(cost)
-		} else {
-			if (player[name].lt(cost)) return
-			player[name] = player[name].sub(cost)
+		if (upg.currencyInternalName){
+			let name = upg.currencyInternalName
+			if (upg.currencyLocation){
+				if (upg.currencyLocation[name].lt(cost)) return
+				upg.currencyLocation[name] = upg.currencyLocation[name].sub(cost)
+			}
+			else if (upg.currencyLayer){
+				let lr = upg.currencyLayer
+				if (player[lr][name].lt(cost)) return
+				player[lr][name] = player[lr][name].sub(cost)
+			}
+			else {
+				if (player[name].lt(cost)) return
+				player[name] = player[name].sub(cost)
+			}
 		}
-	} else {
-		if (player[layer].points.lt(cost)) return
-		player[layer].points = player[layer].points.sub(cost)	
+		else {
+			if (player[layer].points.lt(cost)) return
+			player[layer].points = player[layer].points.sub(cost)	
+		}
 	}
 	player[layer].upgrades.push(id);
-	if (upg.onPurchase != undefined) upg.onPurchase()
+	if (upg.onPurchase != undefined)
+		run(upg.onPurchase, upg)
 }
 
 /*
@@ -578,9 +579,7 @@ function buyMaxBuyable(layer, id) {
 	if (!tmp[layer].buyables[id].canAfford) return
 	if (!layers[layer].buyables[id].buyMax) return
 
-	let arg 
-	if (layer == "i") arg = 100
-	layers[layer].buyables[id].buyMax(arg)
+	run(layers[layer].buyables[id].buyMax, layers[layer].buyables[id])
 	updateBuyableTemp(layer)
 }
 */
@@ -596,7 +595,7 @@ function buyBuyable(layer, id) {
 	}
 	*/
 
-	layers[layer].buyables[id].buy()
+	run(layers[layer].buyables[id].buy, layers[layer].buyables[id])
 	updateBuyableTemp(layer)
 }
 
@@ -605,7 +604,7 @@ function clickClickable(layer, id) {
 	if (!tmp[layer].clickables[id].unlocked) return
 	if (!tmp[layer].clickables[id].canClick) return
 
-	layers[layer].clickables[id].onClick()
+	run(layers[layer].clickables[id].onClick, layers[layer].clickables[id])
 	updateClickableTemp(layer)
 }
 
@@ -626,6 +625,19 @@ function inChallenge(layer, id){
 var onTreeTab = true
 function showTab(name) {
 	if (LAYERS.includes(name) && !layerunlocked(name)) return
+	if (player.tab === name && isPlainObject(tmp[name].tabFormat)) {
+		player.subtabs[name].mainTabs = Object.keys(layers[name].tabFormat)[0]
+	}
+	var toTreeTab = name == "none"
+	player.tab = name
+	if (player.navTab == "none" && (tmp[name].row !== "side") && (tmp[name].row !== "otherside")) player.lastSafeTab = name
+	delete player.notify[name]
+	needCanvasUpdate = true
+	document.activeElement.blur()
+}
+
+function showNavTab(name) {
+	if (LAYERS.includes(name) && !layerunlocked(name)) return
 
 	var toTreeTab = name == "tree"
 	player.tab = name
@@ -644,7 +656,7 @@ function notifyLayer(name) {
 }
 
 function nodeShown(layer) {
-	if (tmp[layer].layerShown) return true
+	if (layerShown(layer)) return true
 	switch(layer) {
 		case "idk":
 			return player.l.unlocked
@@ -670,10 +682,9 @@ function toNumber(x) {
 
 function updateMilestones(layer){
 	for (id in layers[layer].milestones){
-		if (!(player[layer].milestones.includes(id)) && layers[layer].milestones[id].done()) {
-			if (layers[layer].milestones[id].unlocked == undefined || layers[layer].milestones[id].unlocked()) {
-				player[layer].milestones.push(id)
-			}
+		if (!(player[layer].milestones.includes(id)) && layers[layer].milestones[id].done()){
+			player[layer].milestones.push(id)
+			if (tmp[layer].milestonePopups || tmp[layer].milestonePopups === undefined) doPopup("milestone", tmp[layer].milestones[id].requirementDescription, "Milestone Gotten!", 3, tmp[layer].color);
 		}
 	}
 }
@@ -683,6 +694,7 @@ function updateAchievements(layer){
 		if (!isNaN(id) && !(player[layer].achievements.includes(id)) && layers[layer].achievements[id].done()) {
 			player[layer].achievements.push(id)
 			if (layers[layer].achievements[id].onComplete) layers[layer].achievements[id].onComplete()
+			if (tmp[layer].achievementPopups || tmp[layer].achievementPopups === undefined) doPopup("achievement", tmp[layer].achievements[id].name, "Achievement Gotten!", 3, tmp[layer].color);
 		}
 	}
 }
@@ -731,17 +743,19 @@ function focused(x) {
 	onFocused = x
 }
 
-function prestigeButtonText(layer) {
-	if (tmp[layer].type == "normal") {
+function prestigeButtonText(layer)
+{
+	if (layers[layer].prestigeButtonText !== undefined)
+		return layers[layer].prestigeButtonText()
+	else if(tmp[layer].type == "normal")
 		return `${ player[layer].points.lt(1e3) ? (tmp[layer].resetDescription !== undefined ? tmp[layer].resetDescription : "Reset for ") : ""}+<b>${formatWhole(tmp[layer].resetGain)}</b> ${tmp[layer].resource} ${tmp[layer].resetGain.lt(100) && player[layer].points.lt(1e3) ? `<br><br>Next at ${ (tmp[layer].roundUpCost ? formatWhole(tmp[layer].nextAt) : format(tmp[layer].nextAt))} ${ tmp[layer].baseResource }` : ""}`
-	} else if (tmp[layer].type== "static") {
+	else if (tmp[layer].type== "static")
 		return `${tmp[layer].resetDescription !== undefined ? tmp[layer].resetDescription : "Reset for "}+<b>${formatWhole(tmp[layer].resetGain)}</b> ${tmp[layer].resource}<br><br>${player[layer].points.lt(30) ? (tmp[layer].baseAmount.gte(tmp[layer].nextAt)&&(tmp[layer].canBuyMax !== undefined) && tmp[layer].canBuyMax?"Next:":"Req:") : ""} ${formatWhole(tmp[layer].baseAmount)} / ${(tmp[layer].roundUpCost ? formatWhole(tmp[layer].nextAtDisp) : format(tmp[layer].nextAtDisp))} ${ tmp[layer].baseResource }		
 		`
-	} else if (tmp[layer].type == "none") {
+	else if (tmp[layer].type == "none")
 		return ""
-	} else {
-		return layers[layer].prestigeButtonText()
-	}
+	else
+		return "You need prestige button text"
 }
 
 
@@ -753,3 +767,53 @@ function isFunction(obj) {
   };
   
 document.title = modInfo.name
+
+
+
+// Variables that must be defined to display popups
+var activePopups = [];
+var popupID = 0;
+
+// Function to show popups
+function doPopup(type="none",text="This is a test popup.",title="",timer=3, color="") {
+	switch(type) {
+		case "achievement":
+			popupTitle = "Achievement Unlocked!";
+			popupType = "achievement-popup"
+			break;
+		case "challenge":
+			popupTitle = "Challenge Complete";
+			popupType = "challenge-popup"
+			break;
+		default:
+			popupTitle = "Something Happened?";
+			popupType = "default-popup"
+			break;
+	}
+	if(title != "") popupTitle = title;
+	popupMessage = text;
+	popupTimer = timer; 
+
+	activePopups.push({"time":popupTimer,"type":popupType,"title":popupTitle,"message":(popupMessage+"\n"),"id":popupID, "color":color})
+	popupID++;
+}
+
+
+//Function to reduce time on active popups
+function adjustPopupTime(diff) {
+	for(popup in activePopups) {
+		activePopups[popup].time -= diff;
+		if(activePopups[popup]["time"] < 0) {
+			activePopups.splice(popup,1); // Remove popup when time hits 0
+		}
+	}
+}
+
+function run(func, target, args=null){
+	if (!!(func && func.constructor && func.call && func.apply)){
+		let bound = func.bind(target) 
+		return bound(args)
+	}
+	else
+		return func;
+}
